@@ -63,6 +63,11 @@ Reads from (all read-only):
 > overridden with the `KIRO_V3_SESSIONS_DIR` environment variable or the
 > `v3_sessions_dir` config key if your build stores sessions elsewhere. Resuming a
 > v3 session launches `kiro-cli chat --v3 --resume-id <id>`.
+>
+> v3 sessions are marked with an orange **`v3`** badge in the sidebar (list and
+> tree views). The preview shows the user/assistant dialogue only — internal
+> reasoning (`operationType: "Reasoning"`) and tool-call/hook events are omitted
+> from the transcript.
 
 ## Install
 
@@ -74,7 +79,9 @@ curl -sL https://raw.githubusercontent.com/byrider/kiro-cli-history/main/get.sh 
 
 Auto-detects your OS (Linux/macOS) and architecture (amd64/arm64), downloads the latest release binary to `~/.local/bin/`.
 
-### From source (requires Go 1.21+)
+### From source (requires Go 1.24+)
+
+Needs Go **1.24+** and a C compiler — the SQLite backend uses CGO. On macOS run `xcode-select --install`; on Debian/Ubuntu `sudo apt-get install build-essential`.
 
 ```bash
 git clone https://github.com/byrider/kiro-cli-history.git
@@ -103,7 +110,7 @@ Run from anywhere. It searches globally.
 | `f` | Fullscreen preview |
 | `d` / `u` | Half-page scroll in preview |
 | `g` / `G` | Jump to top / bottom |
-| `Ctrl+R` | Resume session in Kiro CLI |
+| `Ctrl+R` | Resume session in Kiro CLI (v3 sessions open with `--v3`) |
 | `Ctrl+Y` | Copy conversation to clipboard |
 | `Ctrl+E` | Export conversation as markdown |
 | `s` | Settings |
