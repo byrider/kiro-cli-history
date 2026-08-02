@@ -1,8 +1,8 @@
 # kiro-cli-history
 
-[![CI](https://github.com/Paresh-Maheshwari/kiro-cli-history/actions/workflows/ci.yml/badge.svg)](https://github.com/Paresh-Maheshwari/kiro-cli-history/actions/workflows/ci.yml)
-[![Latest Release](https://img.shields.io/github/v/release/Paresh-Maheshwari/kiro-cli-history?label=latest)](https://github.com/Paresh-Maheshwari/kiro-cli-history/releases/latest)
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![CI](https://github.com/byrider/kiro-cli-history/actions/workflows/ci.yml/badge.svg)](https://github.com/byrider/kiro-cli-history/actions/workflows/ci.yml)
+[![Latest Release](https://img.shields.io/github/v/release/byrider/kiro-cli-history?label=latest)](https://github.com/byrider/kiro-cli-history/releases/latest)
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A fast terminal UI for fuzzy-searching, browsing, and resuming [Kiro CLI](https://kiro.dev/docs/cli/) conversations — including [Kiro CLI v3 (early access)](https://kiro.dev/docs/cli/v3/).
@@ -69,7 +69,7 @@ Reads from (all read-only):
 ### One-liner (prebuilt binary, no Go needed)
 
 ```bash
-curl -sL https://raw.githubusercontent.com/Paresh-Maheshwari/kiro-cli-history/main/get.sh | bash
+curl -sL https://raw.githubusercontent.com/byrider/kiro-cli-history/main/get.sh | bash
 ```
 
 Auto-detects your OS (Linux/macOS) and architecture (amd64/arm64), downloads the latest release binary to `~/.local/bin/`.
@@ -77,7 +77,7 @@ Auto-detects your OS (Linux/macOS) and architecture (amd64/arm64), downloads the
 ### From source (requires Go 1.21+)
 
 ```bash
-git clone https://github.com/Paresh-Maheshwari/kiro-cli-history.git
+git clone https://github.com/byrider/kiro-cli-history.git
 cd kiro-cli-history
 bash install.sh
 ```

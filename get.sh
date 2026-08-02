@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-REPO="Paresh-Maheshwari/kiro-cli-history"
+REPO="byrider/kiro-cli-history"
 BIN_NAME="kiro-cli-history"
 INSTALL_DIR="$HOME/.local/bin"
 

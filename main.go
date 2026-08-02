@@ -12,7 +12,7 @@ import (
 	"kiro-cli-history/internal/ui"
 )
 
-const version = "1.1.0"
+const version = "1.2.0-preview.1"
 
 func main() {
 	if len(os.Args) > 1 {
