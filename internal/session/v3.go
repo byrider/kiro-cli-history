@@ -73,9 +73,11 @@ func LoadV3() []Session {
 
 		sessionID := m.ID
 		if sessionID == "" {
-			// Fall back to the session directory name (the UUID, possibly
-			// prefixed with "sess_").
-			sessionID = strings.TrimPrefix(filepath.Base(dir), "sess_")
+			// Fall back to the session directory name verbatim. The directory
+			// name matches the stored "id" convention for the environment
+			// (a bare UUID, or a "sess_"-prefixed UUID), so it must not be
+			// altered — the resume command passes this value to --resume-id.
+			sessionID = filepath.Base(dir)
 		}
 		title := m.Title
 		if title == "" {
