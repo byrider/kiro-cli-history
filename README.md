@@ -38,6 +38,7 @@ Kiro CLI saves sessions per-directory. If you work across many projects, finding
 - **Global search** — find conversations across all directories
 - **Full-text fuzzy search** — searches every message, not just titles
 - **Markdown preview** — rendered markdown, code blocks, tables
+- **Favorites / pinning** — press `p` to pin a session; pinned chats sort to the top with a ★ and persist across runs (`P` shows favorites only)
 - **Tree view** — press `v` to group sessions by directory (collapsible)
 - **Fullscreen mode** — press `f` for wide content like tables
 - **One-key resume** — `Ctrl+R` to continue a conversation in Kiro CLI
@@ -107,6 +108,8 @@ Run from anywhere. It searches globally.
 | `l` / `Enter` | Open preview pane |
 | `h` / `Esc` | Back to list |
 | `v` | Toggle list/tree view |
+| `p` | Pin / unpin session (favorite) |
+| `P` | Toggle favorites-only view |
 | `f` | Fullscreen preview |
 | `d` / `u` | Half-page scroll in preview |
 | `g` / `G` | Jump to top / bottom |
@@ -145,6 +148,14 @@ Type in the search bar to fuzzy-search across:
 - Full conversation content (every message)
 
 Search is case-insensitive. Multiple words are AND-matched (`deploy aws` finds sessions containing both words).
+
+### Favorites (pinning)
+
+Press `p` to pin (favorite) the selected session, or unpin it if already pinned. Pinned sessions:
+- sort to the **top** of the list and tree, marked with a gold **★**
+- **persist** across runs — pinned session IDs are saved to `~/.config/kiro-cli-history/config.json` under `pinned`
+
+Press `P` to toggle a **favorites-only** view (combines with search); the status bar shows a `★` while active. Classic `--legacy-ui` (SQLite v1) sessions have no stable ID and can't be pinned.
 
 ### Export
 

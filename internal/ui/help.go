@@ -57,6 +57,8 @@ func RenderHelp(w, h, scroll int) string {
 		"",
 		section.Render("  ACTIONS"),
 		helpLine("    f            ", "Fullscreen"),
+		helpLine("    p            ", "Pin / unpin (favorite)"),
+		helpLine("    P            ", "Show favorites only"),
 		helpLine("    Ctrl+R       ", "Resume in Kiro"),
 		helpLine("    Ctrl+Y       ", "Copy chat"),
 		helpLine("    Ctrl+E       ", "Export as markdown"),

@@ -8,11 +8,45 @@ import (
 
 // Config holds user preferences.
 type Config struct {
-	SQLiteEnabled bool   `json:"sqlite_enabled"`  // load classic mode SQLite sessions
-	SQLiteIndex   bool   `json:"sqlite_index"`    // full-text index SQLite content
-	DefaultView   string `json:"default_view"`    // "list" or "tree"
-	V3Enabled     bool   `json:"v3_enabled"`      // load Kiro CLI v3 (preview) sessions
-	V3SessionsDir string `json:"v3_sessions_dir"` // override base v3 sessions dir (empty = ~/.kiro/sessions)
+	SQLiteEnabled bool     `json:"sqlite_enabled"`  // load classic mode SQLite sessions
+	SQLiteIndex   bool     `json:"sqlite_index"`    // full-text index SQLite content
+	DefaultView   string   `json:"default_view"`    // "list" or "tree"
+	V3Enabled     bool     `json:"v3_enabled"`      // load Kiro CLI v3 (preview) sessions
+	V3SessionsDir string   `json:"v3_sessions_dir"` // override base v3 sessions dir (empty = ~/.kiro/sessions)
+	Pinned        []string `json:"pinned"`          // pinned/favorite session IDs
+}
+
+// IsPinned reports whether a session ID is pinned (a favorite).
+func IsPinned(id string) bool {
+	if id == "" {
+		return false
+	}
+	for _, p := range AppConfig.Pinned {
+		if p == id {
+			return true
+		}
+	}
+	return false
+}
+
+// TogglePinned flips the pinned state of a session ID, persists the config,
+// and returns the new state (true = now pinned). Empty IDs are ignored.
+func TogglePinned(id string) bool {
+	if id == "" {
+		return false
+	}
+	for i, p := range AppConfig.Pinned {
+		if p == id {
+			cfg := AppConfig
+			cfg.Pinned = append(append([]string{}, AppConfig.Pinned[:i]...), AppConfig.Pinned[i+1:]...)
+			SaveConfig(cfg)
+			return false
+		}
+	}
+	cfg := AppConfig
+	cfg.Pinned = append(append([]string{}, AppConfig.Pinned...), id)
+	SaveConfig(cfg)
+	return true
 }
 
 var DefaultConfig = Config{

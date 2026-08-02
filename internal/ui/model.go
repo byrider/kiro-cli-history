@@ -47,6 +47,7 @@ type Model struct {
 	HelpScroll    int
 	ShowSettings  bool
 	Fullscreen    bool
+	PinnedOnly    bool
 	ResumeResult  *session.Session
 	Note          string
 	NoteExpiry    time.Time
@@ -143,12 +144,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.SetNote(fmt.Sprintf("Index ready — %d sessions, %d messages", len(m.All), total))
 		// Re-filter to pick up updated msg counts and search text
-		q := m.Input.Value()
-		if q == "" {
-			m.Filtered = m.All
-		} else {
-			m.Filtered = search.Sessions(q, m.All, m.IndexMu)
-		}
+		m.refilter()
 		if m.ViewMode == ViewTree {
 			m.Tree = BuildTree(m.Filtered, m.Input.Value() != "")
 			m.FlatTree = FlattenTree(m.Tree)
@@ -160,7 +156,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case debounceMsg:
 		if msg.Query == m.Input.Value() {
-			m.Filtered = search.Sessions(msg.Query, m.All, m.IndexMu)
+			m.refilter()
 			m.Cursor = 0
 			if m.ViewMode == ViewTree {
 				m.Tree = BuildTree(m.Filtered, m.Input.Value() != "")
@@ -349,7 +345,7 @@ func (m Model) handleSearchKey(key string, msg tea.KeyMsg) (tea.Model, tea.Cmd) 
 	case "esc":
 		if m.Input.Value() != "" {
 			m.Input.SetValue("")
-			m.Filtered = m.All
+			m.refilter()
 			m.Cursor = 0
 			m.RefreshPreview()
 			return m, nil
@@ -401,6 +397,12 @@ func (m Model) handleListKey(key string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.Preview.Height = m.H - 2
 		m.PrevCache = make(map[string]string)
 		m.RefreshPreview()
+		return m, nil
+	case "p":
+		m.DoTogglePin()
+		return m, nil
+	case "P":
+		m.DoTogglePinnedOnly()
 		return m, nil
 	case "l", "enter":
 		if m.ViewMode == ViewTree {
@@ -485,6 +487,9 @@ func (m Model) handlePreviewKey(key string, msg tea.KeyMsg) (tea.Model, tea.Cmd)
 		m.PrevCache = make(map[string]string)
 		m.RefreshPreview()
 		return m, nil
+	case "p":
+		m.DoTogglePin()
+		return m, nil
 	case "esc", "h", "q":
 		// Back to list
 		m.Focus = FocusList
@@ -530,6 +535,106 @@ func defaultViewMode() ViewMode {
 		return ViewTree
 	}
 	return ViewList
+}
+
+// refilter recomputes m.Filtered from m.All using the current search query and
+// the favorites-only toggle. Results preserve m.All's pinned-first ordering.
+func (m *Model) refilter() {
+	if m.Input.Value() == "" {
+		m.Filtered = m.All
+	} else {
+		m.Filtered = search.Sessions(m.Input.Value(), m.All, m.IndexMu)
+	}
+	if m.PinnedOnly {
+		kept := make([]session.Session, 0, len(m.Filtered))
+		for _, s := range m.Filtered {
+			if s.Pinned {
+				kept = append(kept, s)
+			}
+		}
+		m.Filtered = kept
+	}
+}
+
+// currentSession returns the session under the cursor in the active view, or nil.
+func (m *Model) currentSession() *session.Session {
+	if m.ViewMode == ViewTree {
+		if m.TreeCursor >= 0 && m.TreeCursor < len(m.FlatTree) {
+			if s := m.FlatTree[m.TreeCursor].Session; s != nil {
+				return s
+			}
+		}
+		return nil
+	}
+	if len(m.Filtered) > 0 && m.Cursor >= 0 && m.Cursor < len(m.Filtered) {
+		return &m.Filtered[m.Cursor]
+	}
+	return nil
+}
+
+// DoTogglePin pins/unpins the current session, persists it, re-sorts
+// (pinned-first), and keeps the cursor on the same session where possible.
+func (m *Model) DoTogglePin() {
+	s := m.currentSession()
+	if s == nil {
+		return
+	}
+	if s.SessionID == "" {
+		m.SetNote("Can't pin this session (no ID)")
+		return
+	}
+	id := s.SessionID
+	now := session.TogglePinned(id)
+	for i := range m.All {
+		if m.All[i].SessionID == id {
+			m.All[i].Pinned = now
+		}
+	}
+	session.SortSessions(m.All)
+	m.refilter()
+
+	if m.ViewMode == ViewTree {
+		m.Tree = BuildTree(m.Filtered, m.Input.Value() != "")
+		m.FlatTree = FlattenTree(m.Tree)
+		if m.TreeCursor >= len(m.FlatTree) {
+			m.TreeCursor = 0
+		}
+	} else {
+		m.Cursor = 0
+		for i := range m.Filtered {
+			if m.Filtered[i].SessionID == id {
+				m.Cursor = i
+				break
+			}
+		}
+	}
+
+	if now {
+		m.SetNote("★ Pinned to top")
+	} else {
+		m.SetNote("Unpinned")
+	}
+	m.PrevCache = make(map[string]string)
+	m.RefreshPreview()
+}
+
+// DoTogglePinnedOnly toggles the favorites-only view filter.
+func (m *Model) DoTogglePinnedOnly() {
+	m.PinnedOnly = !m.PinnedOnly
+	m.refilter()
+	m.Cursor = 0
+	if m.ViewMode == ViewTree {
+		m.Tree = BuildTree(m.Filtered, m.Input.Value() != "")
+		m.FlatTree = FlattenTree(m.Tree)
+		m.TreeCursor = 0
+	}
+	if m.PinnedOnly {
+		m.SetNote(fmt.Sprintf("Favorites only (%d)", len(m.Filtered)))
+	} else {
+		m.SetNote("Showing all sessions")
+	}
+	m.PrevCache = make(map[string]string)
+	m.RefreshPreview()
 }
 
 func (m *Model) refreshTreePreview() {

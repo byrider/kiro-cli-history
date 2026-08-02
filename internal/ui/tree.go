@@ -117,14 +117,23 @@ func RenderTreeNode(node *TreeNode, width int, selected bool) string {
 		title = title[:maxTitle] + "…"
 	}
 	isV3 := node.Session != nil && node.Session.Source == "jsonl_v3"
+	pinned := node.Session != nil && node.Session.Pinned
 	if selected {
-		s := "    " + title
+		s := "    "
+		if pinned {
+			s += "★ "
+		}
+		s += title
 		if isV3 {
 			s += "  v3"
 		}
 		return SelectedStyle.Width(width).Render(s)
 	}
-	line := "    " + DimStyle.Render(title)
+	line := "    "
+	if pinned {
+		line += PinStyle.Render("★ ")
+	}
+	line += DimStyle.Render(title)
 	if isV3 {
 		line += "  " + V3Badge.Render("v3")
 	}

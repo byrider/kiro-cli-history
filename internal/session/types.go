@@ -14,6 +14,7 @@ type Session struct {
 	DurationMin int
 	JSONLPath   string // JSONL sessions
 	SearchText  string // pre-built lowercase index
+	Pinned      bool   // favorite (derived from Config.Pinned, not persisted here)
 }
 
 // Msg is a single conversation message.

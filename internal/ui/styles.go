@@ -16,7 +16,9 @@ var (
 	YouLabel  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
 	KiroLabel = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
 	// V3Badge marks Kiro CLI v3 (preview) sessions in the sidebar.
-	V3Badge   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
+	V3Badge = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
+	// PinStyle marks pinned/favorite sessions in the sidebar.
+	PinStyle  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("220"))
 	HeaderKey = lipgloss.NewStyle().Bold(true)
 	SepStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 

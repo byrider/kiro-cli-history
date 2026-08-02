@@ -96,21 +96,29 @@ func (m Model) View() string {
 			isV3 := s.Source == "jsonl_v3"
 
 			if i == m.Cursor {
+				titleLine := title
+				if s.Pinned {
+					titleLine = "★ " + title
+				}
 				metaLine := meta
 				if isV3 {
 					metaLine += "  v3"
 				}
 				lines = append(lines,
-					SelectedStyle.Width(lw-2).Render(title),
+					SelectedStyle.Width(lw-2).Render(titleLine),
 					SelectedStyle.Width(lw-2).Render(metaLine),
 					"")
 			} else {
+				titleLine := TitleStyle.Render(title)
+				if s.Pinned {
+					titleLine = PinStyle.Render("★ ") + titleLine
+				}
 				line2 := DimStyle.Render(cwd) + "  " + DimStyle.Render(date) + "  " + CyanStyle.Render(msgs) + "  " + GreenStyle.Render(dur)
 				if isV3 {
 					line2 += "  " + V3Badge.Render("v3")
 				}
 				lines = append(lines,
-					TitleStyle.Render(title),
+					titleLine,
 					line2,
 					"")
 			}
@@ -154,6 +162,9 @@ func (m Model) View() string {
 	if m.Indexing {
 		count += " ⟳"
 	}
+	if m.PinnedOnly {
+		count += " ★"
+	}
 	if q := m.Input.Value(); q != "" {
 		count += DimStyle.Render(fmt.Sprintf(" '%s'", q))
 	}
@@ -169,7 +180,7 @@ func (m Model) View() string {
 		if m.ViewMode == ViewTree {
 			viewHint = "v list"
 		}
-		hints = hint("/", " search") + sep + hint("l", " preview") + sep + hint("f", " full") + sep + hint(viewHint, "") + sep + hint("s", " settings") + sep + hint("?", " help")
+		hints = hint("/", " search") + sep + hint("l", " preview") + sep + hint("p", " pin") + sep + hint(viewHint, "") + sep + hint("s", " settings") + sep + hint("?", " help")
 	case FocusPreview:
 		mode = modePreview.Render(" PREVIEW ")
 		hints = hint("j/k", " scroll") + sep + hint("d/u", " page") + sep + hint("f", " full") + sep + hint("h", " back") + sep + hint("s", " settings") + sep + hint("?", " help")
