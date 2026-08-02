@@ -15,6 +15,8 @@ var (
 			Foreground(lipgloss.Color("245"))
 	YouLabel  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
 	KiroLabel = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
+	// V3Badge marks Kiro CLI v3 (preview) sessions in the sidebar.
+	V3Badge   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("214"))
 	HeaderKey = lipgloss.NewStyle().Bold(true)
 	SepStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 

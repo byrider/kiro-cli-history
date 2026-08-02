@@ -12,7 +12,7 @@ import (
 	"kiro-cli-history/internal/ui"
 )
 
-const version = "1.1.0"
+const version = "1.2.0-preview.1"
 
 func main() {
 	if len(os.Args) > 1 {
@@ -78,7 +78,14 @@ Config: ~/.config/kiro-cli-history/config.json
 		fmt.Fprintf(os.Stderr, "kiro-cli not found in PATH\n")
 		os.Exit(1)
 	}
-	if err := syscall.Exec(bin, []string{"kiro-cli", "chat", "--resume-id", s.SessionID}, os.Environ()); err != nil {
+	// v3 (preview) sessions must be resumed on the v3 engine — they are not
+	// resumable under the default v2 engine.
+	args := []string{"kiro-cli", "chat"}
+	if s.Source == "jsonl_v3" {
+		args = append(args, "--v3")
+	}
+	args = append(args, "--resume-id", s.SessionID)
+	if err := syscall.Exec(bin, args, os.Environ()); err != nil {
 		fmt.Fprintf(os.Stderr, "exec failed: %v\n", err)
 		os.Exit(1)
 	}

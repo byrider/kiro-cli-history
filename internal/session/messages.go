@@ -9,6 +9,9 @@ import (
 
 // ExtractMessages returns messages from any session format.
 func ExtractMessages(s Session, limit int) []Msg {
+	if s.Source == "jsonl_v3" && s.JSONLPath != "" {
+		return extractV3Messages(s.JSONLPath, limit)
+	}
 	if s.JSONLPath != "" {
 		return extractJSONLMessages(s.JSONLPath, limit)
 	}
