@@ -13,6 +13,11 @@ import (
 func LoadAll() []Session {
 	jsonl := LoadJSONL()
 
+	var v3 []Session
+	if AppConfig.V3Enabled {
+		v3 = LoadV3()
+	}
+
 	var sqlite []Session
 	if AppConfig.SQLiteEnabled {
 		sqlite = LoadSQLite()
@@ -21,6 +26,12 @@ func LoadAll() []Session {
 	seen := make(map[string]bool, len(jsonl))
 	for _, s := range jsonl {
 		if s.SessionID != "" {
+			seen[s.SessionID] = true
+		}
+	}
+	for _, s := range v3 {
+		if s.SessionID != "" && !seen[s.SessionID] {
+			jsonl = append(jsonl, s)
 			seen[s.SessionID] = true
 		}
 	}
@@ -68,8 +79,14 @@ func BuildFullIndex(sessions []Session, mu *sync.RWMutex, done func()) {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			text := indexJSONLFast(sessions[idx].JSONLPath)
-			count := countFast(sessions[idx].JSONLPath)
+			var text string
+			var count int
+			if sessions[idx].Source == "jsonl_v3" {
+				text, count = extractV3Index(sessions[idx].JSONLPath)
+			} else {
+				text = indexJSONLFast(sessions[idx].JSONLPath)
+				count = countFast(sessions[idx].JSONLPath)
+			}
 
 			mu.Lock()
 			if text != "" {

@@ -5,7 +5,7 @@
 [![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A fast terminal UI for fuzzy-searching, browsing, and resuming [Kiro CLI](https://kiro.dev/docs/cli/) conversations.
+A fast terminal UI for fuzzy-searching, browsing, and resuming [Kiro CLI](https://kiro.dev/docs/cli/) conversations — including [Kiro CLI v3 (early access)](https://kiro.dev/docs/cli/v3/).
 
 > **Read-only** — never writes to or modifies your Kiro CLI session data.
 
@@ -44,7 +44,7 @@ Kiro CLI saves sessions per-directory. If you work across many projects, finding
 - **Copy to clipboard** — `Ctrl+Y` to copy an entire conversation
 - **Export as markdown** — `Ctrl+E` to save conversation as `.md` file
 - **Text selection** — select and copy text directly from the preview
-- **All session formats** — reads JSONL (new TUI mode) and SQLite (--classic / --legacy-ui)
+- **All session formats** — reads JSONL (new TUI mode), Kiro CLI v3 preview (`--v3`), and SQLite (--classic / --legacy-ui)
 - **Fast** — 200ms startup, instant search, background indexing
 - **Configurable** — toggle SQLite loading, full-text indexing, default view via settings (`s`)
 
@@ -52,8 +52,17 @@ Kiro CLI saves sessions per-directory. If you work across many projects, finding
 
 Reads from (all read-only):
 - `~/.kiro/sessions/cli/` — JSONL sessions (new TUI mode)
+- `~/.kiro/sessions/cli-v3/` — Kiro CLI v3 preview sessions (`kiro-cli --v3`, early access)
 - `~/.local/share/kiro-cli/data.sqlite3` — SQLite sessions (Linux, --classic / --legacy-ui)
 - `~/Library/Application Support/kiro-cli/data.sqlite3` — SQLite sessions (macOS)
+
+> **Kiro CLI v3 preview:** v3 (early access, `kiro-cli --v3`) is TUI-only and stores
+> sessions under `~/.kiro/sessions/` in a new, non-backward-compatible format that
+> runs alongside your existing 2.x sessions. Because the preview layout can shift
+> between early-access builds, the v3 directory can be overridden with the
+> `KIRO_V3_SESSIONS_DIR` environment variable or the `v3_sessions_dir` config key
+> if your build stores sessions elsewhere. Resuming a v3 session launches
+> `kiro-cli chat --v3 --resume-id <id>`.
 
 ## Install
 
@@ -118,6 +127,7 @@ Press `s` to open settings. Config saved to `~/.config/kiro-cli-history/config.j
 |---------|---------|-------------|
 | Load classic mode chats | ON | Load SQLite sessions from --classic / --legacy-ui |
 | Full-text search classic chats | OFF | Index classic chat content (slow on large DBs) |
+| Load v3 preview chats | ON | Load Kiro CLI v3 preview sessions (`kiro-cli --v3`) |
 | Default sidebar view | list | Start in list or tree view |
 
 ### Searching
@@ -140,6 +150,7 @@ Kiro CLI stores conversations in multiple formats:
 | Format | Location | Used by |
 |--------|----------|---------|
 | JSONL | `~/.kiro/sessions/cli/*.json` + `*.jsonl` | New TUI mode (`kiro-cli`) |
+| JSONL v3 | `~/.kiro/sessions/cli-v3/*.json` + `*.jsonl` | v3 preview (`kiro-cli --v3`) |
 | SQLite v2 | `data.sqlite3` → `conversations_v2` | `kiro-cli --classic` / `--legacy-ui` |
 | SQLite v1 | `data.sqlite3` → `conversations` | Older classic versions |
 

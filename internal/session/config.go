@@ -8,15 +8,19 @@ import (
 
 // Config holds user preferences.
 type Config struct {
-	SQLiteEnabled bool   `json:"sqlite_enabled"` // load classic mode SQLite sessions
-	SQLiteIndex   bool   `json:"sqlite_index"`   // full-text index SQLite content
-	DefaultView   string `json:"default_view"`   // "list" or "tree"
+	SQLiteEnabled bool   `json:"sqlite_enabled"`  // load classic mode SQLite sessions
+	SQLiteIndex   bool   `json:"sqlite_index"`    // full-text index SQLite content
+	DefaultView   string `json:"default_view"`    // "list" or "tree"
+	V3Enabled     bool   `json:"v3_enabled"`      // load Kiro CLI v3 (preview) sessions
+	V3SessionsDir string `json:"v3_sessions_dir"` // override path to v3 sessions dir (empty = auto)
 }
 
 var DefaultConfig = Config{
 	SQLiteEnabled: true,
 	SQLiteIndex:   false,
 	DefaultView:   "list",
+	V3Enabled:     true,
+	V3SessionsDir: "",
 }
 
 var AppConfig = DefaultConfig

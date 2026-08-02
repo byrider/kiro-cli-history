@@ -9,7 +9,7 @@ type Session struct {
 	Cwd         string
 	CreatedAt   string
 	UpdatedAt   string
-	Source      string // "jsonl", "sqlite_v1", "sqlite_v2"
+	Source      string // "jsonl", "jsonl_v3", "sqlite_v1", "sqlite_v2"
 	MsgCount    int
 	DurationMin int
 	JSONLPath   string // JSONL sessions

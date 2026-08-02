@@ -108,6 +108,8 @@ func RenderPreview(s session.Session, width int) string {
 	switch source {
 	case "jsonl":
 		source = "JSONL"
+	case "jsonl_v3":
+		source = "JSONL v3 (preview)"
 	case "sqlite_v1":
 		source = "SQLite v1"
 	case "sqlite_v2":

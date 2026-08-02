@@ -241,6 +241,10 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			session.SaveConfig(cfg)
 		case "3":
 			cfg := session.AppConfig
+			cfg.V3Enabled = !cfg.V3Enabled
+			session.SaveConfig(cfg)
+		case "4":
+			cfg := session.AppConfig
 			if cfg.DefaultView == "tree" {
 				cfg.DefaultView = "list"
 			} else {

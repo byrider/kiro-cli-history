@@ -44,6 +44,7 @@ func RenderSettings(w, h, cursor int) string {
 	}{
 		{"1", "Load --classic / --legacy-ui chats", cfg.SQLiteEnabled},
 		{"2", "Full-text search in classic chats", cfg.SQLiteIndex},
+		{"3", "Load v3 preview chats (kiro-cli --v3)", cfg.V3Enabled},
 	}
 
 	viewLabel := "list"
@@ -64,12 +65,12 @@ func RenderSettings(w, h, cursor int) string {
 		)
 	}
 	body += fmt.Sprintf("  %s  %s %s\n\n",
-		key.Render("[3]"),
+		key.Render("[4]"),
 		desc.Render("Default sidebar view"),
 		on.Render("  "+viewLabel),
 	)
 
-	body += hint.Render("  Press 1/2/3 to toggle · s/Esc to close") + "\n" +
+	body += hint.Render("  Press 1/2/3/4 to toggle · s/Esc to close") + "\n" +
 		hint.Render("  Changes apply on next launch")
 
 	box := lipgloss.NewStyle().
