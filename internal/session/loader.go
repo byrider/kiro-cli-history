@@ -42,21 +42,34 @@ func LoadAll() []Session {
 		}
 	}
 
-	sort.Slice(jsonl, func(i, j int) bool {
-		a, b := jsonl[i].UpdatedAt, jsonl[j].UpdatedAt
-		if a == "" {
-			a = jsonl[i].CreatedAt
-		}
-		if b == "" {
-			b = jsonl[j].CreatedAt
-		}
-		return a > b
-	})
+	for i := range jsonl {
+		jsonl[i].Pinned = IsPinned(jsonl[i].SessionID)
+	}
+	SortSessions(jsonl)
 
 	for i := range jsonl {
 		jsonl[i].SearchText = strings.ToLower(jsonl[i].Title) + "\n" + strings.ToLower(jsonl[i].Cwd) + "\n"
 	}
 	return jsonl
+}
+
+// SortSessions orders sessions pinned-first, then by recency
+// (UpdatedAt, falling back to CreatedAt) descending. Stable so the relative
+// order of equal keys is preserved.
+func SortSessions(sessions []Session) {
+	sort.SliceStable(sessions, func(i, j int) bool {
+		if sessions[i].Pinned != sessions[j].Pinned {
+			return sessions[i].Pinned // pinned sorts before unpinned
+		}
+		a, b := sessions[i].UpdatedAt, sessions[j].UpdatedAt
+		if a == "" {
+			a = sessions[i].CreatedAt
+		}
+		if b == "" {
+			b = sessions[j].CreatedAt
+		}
+		return a > b
+	})
 }
 
 // BuildFullIndex adds message content to the search index in the background.
