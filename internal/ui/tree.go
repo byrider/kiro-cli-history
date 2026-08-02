@@ -116,10 +116,19 @@ func RenderTreeNode(node *TreeNode, width int, selected bool) string {
 	if len(title) > maxTitle {
 		title = title[:maxTitle] + "…"
 	}
+	isV3 := node.Session != nil && node.Session.Source == "jsonl_v3"
 	if selected {
-		return SelectedStyle.Width(width).Render("    " + title)
+		s := "    " + title
+		if isV3 {
+			s += "  v3"
+		}
+		return SelectedStyle.Width(width).Render(s)
 	}
-	return "    " + DimStyle.Render(title)
+	line := "    " + DimStyle.Render(title)
+	if isV3 {
+		line += "  " + V3Badge.Render("v3")
+	}
+	return line
 }
 
 func formatCount(n int) string {

@@ -93,16 +93,25 @@ func (m Model) View() string {
 			msgs := fmt.Sprintf("%d msgs", s.MsgCount)
 			dur := FmtDur(s.DurationMin)
 			meta := cwd + "  " + date + "  " + msgs + "  " + dur
+			isV3 := s.Source == "jsonl_v3"
 
 			if i == m.Cursor {
+				metaLine := meta
+				if isV3 {
+					metaLine += "  v3"
+				}
 				lines = append(lines,
 					SelectedStyle.Width(lw-2).Render(title),
-					SelectedStyle.Width(lw-2).Render(meta),
+					SelectedStyle.Width(lw-2).Render(metaLine),
 					"")
 			} else {
+				line2 := DimStyle.Render(cwd) + "  " + DimStyle.Render(date) + "  " + CyanStyle.Render(msgs) + "  " + GreenStyle.Render(dur)
+				if isV3 {
+					line2 += "  " + V3Badge.Render("v3")
+				}
 				lines = append(lines,
 					TitleStyle.Render(title),
-					DimStyle.Render(cwd)+"  "+DimStyle.Render(date)+"  "+CyanStyle.Render(msgs)+"  "+GreenStyle.Render(dur),
+					line2,
 					"")
 			}
 		}
