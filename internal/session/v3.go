@@ -36,8 +36,9 @@ type v3Meta struct {
 // needed to reconstruct the conversation.
 type v3Event struct {
 	Payload struct {
-		Type    string          `json:"type"`
-		Content json.RawMessage `json:"content"`
+		Type          string          `json:"type"`
+		OperationType string          `json:"operationType"`
+		Content       json.RawMessage `json:"content"`
 	} `json:"payload"`
 }
 
@@ -148,6 +149,13 @@ func extractV3Messages(path string, limit int) []Msg {
 		case "user":
 			role = "you"
 		case "assistant":
+			// Assistant events are either the actual reply (operationType
+			// "Say") or internal chain-of-thought (operationType "Reasoning").
+			// Skip reasoning so the transcript shows the real dialogue, not the
+			// model's thinking. An absent operationType is treated as a reply.
+			if e.Payload.OperationType == "Reasoning" {
+				continue
+			}
 			role = "kiro"
 		default:
 			continue
