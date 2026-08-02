@@ -11,61 +11,88 @@ import (
 //
 // v3 is opt-in (`kiro-cli --v3`) and runs alongside a 2.x install. It is
 // TUI-only — the classic/SQLite mode is not supported — so sessions are stored
-// as files under ~/.kiro/sessions/ (see PathsV3), NOT in the SQLite database.
+// as files, NOT in the SQLite database. Each session is its own directory:
 //
-// The on-disk format is documented as "not backward-compatible" with v2 but the
-// exact wire schema is not published for the preview and is expected to shift
-// between early-access builds. To stay resilient, LoadV3 reuses the v2 metadata
-// layout where present and extractV3Messages parses several plausible line
-// shapes rather than assuming one. Sessions are tagged Source "jsonl_v3".
+//	<base>/<workspace-hash>/<session-dir>/session.json   metadata
+//	<base>/<workspace-hash>/<session-dir>/messages.jsonl  event stream
+//
+// where <base> is ~/.kiro/sessions (see PathsV3). The session directory name is
+// the session UUID (some builds prefix it with "sess_"); the canonical ID is the
+// "id" field inside session.json. Sessions are tagged Source "jsonl_v3".
 
-// LoadV3 reads Kiro CLI v3 preview sessions from PathsV3()/*.json (+ *.jsonl).
+// v3Meta mirrors the fields of session.json that this viewer needs.
+type v3Meta struct {
+	ID             string   `json:"id"`
+	Title          string   `json:"title"`
+	WorkspacePaths []string `json:"workspacePaths"`
+	CreatedAt      string   `json:"createdAt"`
+	LastModifiedAt string   `json:"lastModifiedAt"`
+	Status         string   `json:"status"`
+}
+
+// v3Event is one line of messages.jsonl. The event stream carries many record
+// types (user/assistant turns, tool_call/tool_result pairs, turn boundaries,
+// steering inclusions, usage summaries); only the discriminator and content are
+// needed to reconstruct the conversation.
+type v3Event struct {
+	Payload struct {
+		Type    string          `json:"type"`
+		Content json.RawMessage `json:"content"`
+	} `json:"payload"`
+}
+
+// LoadV3 discovers Kiro CLI v3 preview sessions under PathsV3().
+// Layout: <base>/<workspace-hash>/<session-dir>/session.json (+ messages.jsonl).
 func LoadV3() []Session {
-	dir := PathsV3()
-	if dir == "" {
+	base := PathsV3()
+	if base == "" {
 		return nil
 	}
-	files, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	// Two levels deep: workspace-hash / session-dir / session.json.
+	matches, err := filepath.Glob(filepath.Join(base, "*", "*", "session.json"))
 	if err != nil {
 		return nil
 	}
 
-	out := make([]Session, 0, len(files))
-	for _, f := range files {
-		// Skip *.jsonl content files that the glob may also match on some
-		// platforms; only *.json metadata files drive discovery.
-		if strings.HasSuffix(f, ".jsonl") {
-			continue
-		}
-		info, err := os.Stat(f)
+	out := make([]Session, 0, len(matches))
+	for _, metaPath := range matches {
+		info, err := os.Stat(metaPath)
 		if err != nil || info.Size() > MaxFileSize {
 			continue
 		}
-		data, err := os.ReadFile(f)
+		data, err := os.ReadFile(metaPath)
 		if err != nil {
 			continue
 		}
-		var m jsonlMeta
+		var m v3Meta
 		if json.Unmarshal(data, &m) != nil {
 			continue
 		}
 
-		jpath := strings.TrimSuffix(f, ".json") + ".jsonl"
+		dir := filepath.Dir(metaPath)
 
-		sessionID := m.SessionID
+		sessionID := m.ID
 		if sessionID == "" {
-			// Fall back to the file stem (v3 names files by UUID).
-			sessionID = strings.TrimSuffix(filepath.Base(f), ".json")
+			// Fall back to the session directory name (the UUID, possibly
+			// prefixed with "sess_").
+			sessionID = strings.TrimPrefix(filepath.Base(dir), "sess_")
 		}
 		title := m.Title
 		if title == "" {
 			title = "(untitled)"
 		}
+		cwd := ""
+		if len(m.WorkspacePaths) > 0 {
+			cwd = m.WorkspacePaths[0]
+		}
 
-		// Estimate msg count from jsonl file size (avoids parsing at load time).
+		msgsPath := filepath.Join(dir, "messages.jsonl")
+
+		// Estimate msg count from the event-stream size to avoid parsing at
+		// load time; the exact count is filled in later by extractV3Index.
 		msgCount := 0
-		if ji, err := os.Stat(jpath); err == nil {
-			msgCount = int(ji.Size() / 2000) // ~2KB per message avg
+		if ji, err := os.Stat(msgsPath); err == nil {
+			msgCount = int(ji.Size() / 1500)
 			if msgCount < 1 && ji.Size() > 0 {
 				msgCount = 1
 			}
@@ -74,35 +101,23 @@ func LoadV3() []Session {
 		out = append(out, Session{
 			SessionID:   sessionID,
 			Title:       title,
-			Cwd:         m.Cwd,
+			Cwd:         cwd,
 			CreatedAt:   m.CreatedAt,
-			UpdatedAt:   m.UpdatedAt,
+			UpdatedAt:   m.LastModifiedAt,
 			Source:      "jsonl_v3",
-			DurationMin: computeDuration(m.CreatedAt, m.UpdatedAt),
-			JSONLPath:   jpath,
+			MsgCount:    msgCount,
+			DurationMin: computeDuration(m.CreatedAt, m.LastModifiedAt),
+			JSONLPath:   msgsPath,
 		})
 	}
 	return out
 }
 
-// v3Line is a permissive view over a single v3 JSONL record. Different
-// early-access builds may key role/content differently, so every plausible
-// field name is captured and resolved in extractV3Messages.
-type v3Line struct {
-	Kind    string          `json:"kind"`
-	Type    string          `json:"type"`
-	Role    string          `json:"role"`
-	Data    json.RawMessage `json:"data"`
-	Content json.RawMessage `json:"content"`
-	Payload json.RawMessage `json:"payload"`
-	Text    string          `json:"text"`
-}
-
-// extractV3Messages reads messages from a v3 .jsonl file, tolerating multiple
-// record shapes:
-//   - v2 TUI blocks:  {"kind":"Prompt"|"AssistantMessage","data":{"content":[{"kind":"text","data":"..."}]}}
-//   - role/content:   {"role":"user"|"assistant","content":"..." | [{"type":"text","text":"..."}]}
-//   - typed payload:  {"type":"...","payload":{...}} with a nested text/content field
+// extractV3Messages reconstructs the user/assistant conversation from a v3
+// messages.jsonl event stream. Non-conversational events (tool calls/results,
+// turn boundaries, session metadata, usage summaries) are skipped. Consecutive
+// events from the same role are merged into a single bubble so a turn made of
+// several streamed assistant events reads as one message.
 func extractV3Messages(path string, limit int) []Msg {
 	info, err := os.Stat(path)
 	if err != nil || info.Size() == 0 {
@@ -121,21 +136,31 @@ func extractV3Messages(path string, limit int) []Msg {
 	var msgs []Msg
 	dec := json.NewDecoder(f)
 	for dec.More() {
-		var line v3Line
-		if dec.Decode(&line) != nil {
+		var e v3Event
+		if dec.Decode(&e) != nil {
 			break
 		}
 
-		role := v3Role(line)
-		if role == "" {
+		var role string
+		switch e.Payload.Type {
+		case "user":
+			role = "you"
+		case "assistant":
+			role = "kiro"
+		default:
 			continue
 		}
 
-		text := v3Text(line)
+		text := textFromRaw(e.Payload.Content)
 		if text == "" {
 			continue
 		}
 
+		// Merge consecutive same-role events into one bubble.
+		if n := len(msgs); n > 0 && msgs[n-1].Role == role {
+			msgs[n-1].Text += "\n\n" + text
+			continue
+		}
 		msgs = append(msgs, Msg{Role: role, Text: text})
 		if limit > 0 && len(msgs) >= limit {
 			return msgs
@@ -144,57 +169,38 @@ func extractV3Messages(path string, limit int) []Msg {
 	return msgs
 }
 
-// v3Role maps a record's kind/type/role onto "you" or "kiro" (or "" to skip).
-func v3Role(line v3Line) string {
-	switch strings.ToLower(line.Kind) {
-	case "prompt":
-		return "you"
-	case "assistantmessage", "response":
-		return "kiro"
+// extractV3Index returns the lowercased search text and the exact message count
+// for a v3 session in a single pass, using the tolerant conversation parser.
+func extractV3Index(path string) (text string, count int) {
+	info, err := os.Stat(path)
+	if err != nil || info.Size() == 0 || info.Size() > MaxFileSize {
+		return "", 0
 	}
-	switch strings.ToLower(line.Role) {
-	case "user", "human", "you":
-		return "you"
-	case "assistant", "kiro", "ai", "model":
-		return "kiro"
+	msgs := extractV3Messages(path, 0)
+	if len(msgs) == 0 {
+		return "", 0
 	}
-	switch strings.ToLower(line.Type) {
-	case "prompt", "user", "user_message", "usermessage":
-		return "you"
-	case "assistant", "assistant_message", "assistantmessage", "response":
-		return "kiro"
+	var b strings.Builder
+	for _, m := range msgs {
+		b.WriteString(strings.ToLower(m.Text))
+		b.WriteByte('\n')
 	}
-	return ""
+	return b.String(), len(msgs)
 }
 
-// v3Text pulls the human-readable text out of whichever field carries it.
-func v3Text(line v3Line) string {
-	// Direct text field.
-	if t := strings.TrimSpace(line.Text); t != "" {
-		return t
-	}
-	// content / data / payload may each be a string or a structured blob.
-	for _, raw := range []json.RawMessage{line.Data, line.Content, line.Payload} {
-		if len(raw) == 0 {
-			continue
-		}
-		if t := textFromRaw(raw); t != "" {
-			return t
-		}
-	}
-	return ""
-}
-
-// textFromRaw extracts text from a raw JSON value that may be:
+// textFromRaw extracts human-readable text from a v3 content value, which is
+// normally a plain string but is tolerated as a structured value too:
 //   - a plain string
-//   - {"content": <string | blocks>}
-//   - {"text": "..."}
-//   - {"prompt": "..."}
-//   - a list of blocks [{"kind"|"type":"text","data"|"text":"..."}]
+//   - {"content": <string | blocks>} / {"text": "..."} / {"prompt": "..."}
+//   - a list of blocks [{"type"|"kind":"text","text"|"data":"..."}]
 func textFromRaw(raw json.RawMessage) string {
-	// Plain string.
+	if len(raw) == 0 {
+		return ""
+	}
+
+	// Plain string (the common case for user/assistant content).
 	var s string
-	if json.Unmarshal(raw, &s) == nil && strings.TrimSpace(s) != "" {
+	if json.Unmarshal(raw, &s) == nil {
 		return strings.TrimSpace(s)
 	}
 
@@ -219,7 +225,6 @@ func textFromRaw(raw json.RawMessage) string {
 			if t := textFromBlocks(obj.Content); t != "" {
 				return t
 			}
-			// content itself may be a plain string.
 			var cs string
 			if json.Unmarshal(obj.Content, &cs) == nil && strings.TrimSpace(cs) != "" {
 				return strings.TrimSpace(cs)
@@ -228,10 +233,7 @@ func textFromRaw(raw json.RawMessage) string {
 	}
 
 	// Bare list of blocks.
-	if t := textFromBlocks(raw); t != "" {
-		return t
-	}
-	return ""
+	return textFromBlocks(raw)
 }
 
 // textFromBlocks joins the text of the "text" blocks in a content array.
@@ -261,25 +263,4 @@ func textFromBlocks(raw json.RawMessage) string {
 		}
 	}
 	return strings.TrimSpace(strings.Join(parts, "\n"))
-}
-
-// extractV3Index returns the lowercased search text and the exact message count
-// for a v3 session in a single pass. Because the v3 preview wire format is not
-// fixed, a marker-based fast scan (like the v2 countFast) can't reliably match
-// every line shape, so v3 always uses the tolerant parser for an accurate count.
-func extractV3Index(path string) (text string, count int) {
-	info, err := os.Stat(path)
-	if err != nil || info.Size() == 0 || info.Size() > MaxFileSize {
-		return "", 0
-	}
-	msgs := extractV3Messages(path, 0)
-	if len(msgs) == 0 {
-		return "", 0
-	}
-	var b strings.Builder
-	for _, m := range msgs {
-		b.WriteString(strings.ToLower(m.Text))
-		b.WriteByte('\n')
-	}
-	return b.String(), len(msgs)
 }

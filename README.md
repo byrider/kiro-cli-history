@@ -52,17 +52,17 @@ Kiro CLI saves sessions per-directory. If you work across many projects, finding
 
 Reads from (all read-only):
 - `~/.kiro/sessions/cli/` — JSONL sessions (new TUI mode)
-- `~/.kiro/sessions/cli-v3/` — Kiro CLI v3 preview sessions (`kiro-cli --v3`, early access)
+- `~/.kiro/sessions/<workspace-hash>/<session>/` — Kiro CLI v3 preview sessions (`kiro-cli --v3`, early access)
 - `~/.local/share/kiro-cli/data.sqlite3` — SQLite sessions (Linux, --classic / --legacy-ui)
 - `~/Library/Application Support/kiro-cli/data.sqlite3` — SQLite sessions (macOS)
 
 > **Kiro CLI v3 preview:** v3 (early access, `kiro-cli --v3`) is TUI-only and stores
-> sessions under `~/.kiro/sessions/` in a new, non-backward-compatible format that
-> runs alongside your existing 2.x sessions. Because the preview layout can shift
-> between early-access builds, the v3 directory can be overridden with the
-> `KIRO_V3_SESSIONS_DIR` environment variable or the `v3_sessions_dir` config key
-> if your build stores sessions elsewhere. Resuming a v3 session launches
-> `kiro-cli chat --v3 --resume-id <id>`.
+> each session as a directory under `~/.kiro/sessions/` — `session.json` (title,
+> `workspacePaths`, timestamps, status) plus a `messages.jsonl` event stream —
+> running alongside your existing 2.x sessions. The base sessions directory can be
+> overridden with the `KIRO_V3_SESSIONS_DIR` environment variable or the
+> `v3_sessions_dir` config key if your build stores sessions elsewhere. Resuming a
+> v3 session launches `kiro-cli chat --v3 --resume-id <id>`.
 
 ## Install
 
@@ -150,7 +150,7 @@ Kiro CLI stores conversations in multiple formats:
 | Format | Location | Used by |
 |--------|----------|---------|
 | JSONL | `~/.kiro/sessions/cli/*.json` + `*.jsonl` | New TUI mode (`kiro-cli`) |
-| JSONL v3 | `~/.kiro/sessions/cli-v3/*.json` + `*.jsonl` | v3 preview (`kiro-cli --v3`) |
+| v3 (preview) | `~/.kiro/sessions/<workspace-hash>/<session>/session.json` + `messages.jsonl` | v3 preview (`kiro-cli --v3`) |
 | SQLite v2 | `data.sqlite3` → `conversations_v2` | `kiro-cli --classic` / `--legacy-ui` |
 | SQLite v1 | `data.sqlite3` → `conversations` | Older classic versions |
 

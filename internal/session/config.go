@@ -12,7 +12,7 @@ type Config struct {
 	SQLiteIndex   bool   `json:"sqlite_index"`    // full-text index SQLite content
 	DefaultView   string `json:"default_view"`    // "list" or "tree"
 	V3Enabled     bool   `json:"v3_enabled"`      // load Kiro CLI v3 (preview) sessions
-	V3SessionsDir string `json:"v3_sessions_dir"` // override path to v3 sessions dir (empty = auto)
+	V3SessionsDir string `json:"v3_sessions_dir"` // override base v3 sessions dir (empty = ~/.kiro/sessions)
 }
 
 var DefaultConfig = Config{
